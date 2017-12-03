@@ -1,57 +1,66 @@
 import sys
-import os
-import io
 from PIL import Image, ImageFile
 
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-
 def encodeMessage(img, message):
-	with open(img, "rb") as imageFile:
-		f = imageFile.read()
-		bArray = bytearray(f)
+    originalImage = Image.open(img)
+    pixels = list(originalImage.getdata())
 
-		insertBlock("", bArray)
+    pixels = insertMessage(pixels, message)
 
-		image = Image.open(io.BytesIO(bArray))
-		image.save("img.png")
+    newImage = Image.new(originalImage.mode, originalImage.size)
+    newImage.putdata(pixels)
+    newImage.save(img, originalImage.format)
 
 def decodeMessage(img):
-	return "decode"
+    count = 0
+    message = ""
+    
+    originalImage = Image.open(img)
+    pixels = list(originalImage.getdata())
 
-# Inserting block into png data
-def insertBlock(block, arr):
-	start = 0
-	for i in range(0, len(arr)):
-		# Locate index of PNG IHDR block (PNG starting block)
-		if arr[i] == 73 and arr[i+1] == 72 and arr[i+2] == 68 and arr[i+3] == 82:
-			start = i+4 # Start inserting at the index after IHDR block
+    while pixels[count + 1] != 2 and pixels[count + 2] != 0 \
+    and pixels[count + 3] != 1 and pixels[count + 4] != 7:
+        message += decodeChar(pixels[count])
+        count += 1
+        
+    return message
 
-	print arr[start]
-	arr.insert(start, 3)
-	arr.insert(start, 3)
-	arr.insert(start, 3)
-	arr.insert(start, 3)
-	print arr[start], arr[start+1], arr[start+2], arr[start+3], arr[start+4]
+def insertMessage(pixels, message):
+    messageLength = len(message)
+    pixelsLength = len(pixels)
+    count = 0
+
+    while count < messageLength and count < (pixelsLength-4):
+        pixels[count] = encodeChar(message[count])
+        count += 1
+
+    pixels[count+1] = 2
+    pixels[count+2] = 0
+    pixels[count+3] = 1
+    pixels[count+4] = 7
+
+    return pixels
 
 # Takes in character, returns encoded ASCII number
 def encodeChar(char):
-	return ord(char)
+    return ord(char)
 
 # Takes in ASCII number, returns decoded character
 def decodeChar(num):
-	return chr(num)
+    return chr(num)
 
 # Only one arg, decode message
 if len(sys.argv) == 2:
-	print sys.argv[1] + " has the message: " + decodeMessage(sys.argv[1])		
+    print sys.argv[1] + " has the message: " + decodeMessage(sys.argv[1])		
 
 # Two args, encode message
 elif len(sys.argv) == 3:
-	encodeMessage(sys.argv[1], sys.argv[2])
-	print sys.argv[1] + " has been encoded with the message '" + sys.argv[2] + "'"
+    print "Encoding..."
+    encodeMessage(sys.argv[1], sys.argv[2])
+    print sys.argv[1] + " has been encoded with the message '" + sys.argv[2] + "'"
 
 # Error handling
 else:
-	print "Usage: image:png message:string"
-	print "Decoding... notage.py image"
-	print "Encoding... notage.py image message"
+    print "Usage: image:png message:string"
+    print "Decoding... notage.py image"
+    print "Encoding... notage.py image message"
