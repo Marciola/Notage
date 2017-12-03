@@ -18,6 +18,7 @@ def encodeMessage(img, message):
 def decodeMessage(img):
 	return "decode"
 
+# Inserting block into png data
 def insertBlock(block, arr):
 	start = 0
 	for i in range(0, len(arr)):
